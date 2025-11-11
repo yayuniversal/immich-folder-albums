@@ -38,15 +38,35 @@ Tested with Python 3.13; should work with newer versions (*may* work with previo
 
 ## How to use
 ```
-usage: immich-folder-albums.py [-h] [--delete-all-albums] [-s CHUNK_SIZE] [-v]
+usage: immich-folder-albums.py [-h] [--api-url API_URL] [--api-key API_KEY] [-r ALBUM_REGEX] [-s CHUNK_SIZE] [-v] [-n] [-X]
 
 options:
   -h, --help            show this help message and exit
-  --delete-all-albums   Delete all existing immich albums before proceeding
+  --api-url API_URL     Immich API url (should typically end with '/api')
+  --api-key API_KEY     Immich API key
+  -r, --album-regex ALBUM_REGEX
+                        Regexp to compute album name from folder name (default: just use folder name)
   -s, --chunk-size CHUNK_SIZE
-                        Max number of assets to add to an album per API call (default: add all assets to each album in one API call. Sometimes the API call crash if there're too many assets in an album, try lowering this value if that's the case.
+                        Max number of assets to add to an album per API call (default: add all assets to each album in one API call). Sometimes the API call crash if there're too many assets in an album, try lowering this value if that's the case.
   -v, --verbose         Increase verbosity level (up to -vv)
+  -n, --dry-run         Don't create new albums, just print the name of the albums that would be created (useful to test your regex)
+  -X, --delete-all-albums
+                        Delete all existing immich albums before proceeding (even with -n/--dry-run)
 ```
+
+All the CLI parameters can also be set via environment variables:
+
+| CLI parameter         | Environment variable    | required | default                                      |
+| --------------------- | ----------------------- | :------: | -------------------------------------------- |
+| `--api-url`           | `IMMICH_API_URL`        |    x     |                                              |
+| `--api-key`           | `IMMICH_API_KEY`        |    x     |                                              |
+| `--album-regex`       | `ALBUM_NAME_REGEX`      |          | Use the folder name                          |
+| `--chunk-size`        | `API_CHUNK_SIZE`        |          | Add all assets to each album in one API call |
+| `--verbose`           | `VERBOSE`               |          | 0 (up to 2)                                  |
+| `--dry-run`           | `DRY_RUN`[^1]           |          |                                              |
+| `--delete-all-albums` | `DELETE_ALL_ALBUMS`[^1] |          |                                              |
+
+[^1]: Enabled if set and non-empty. So even if `DELETE_ALL_ALBUMS=0`, all existing albums will be deleted.
 
 
 ## `.album` files

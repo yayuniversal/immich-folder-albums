@@ -5,6 +5,7 @@ import argparse
 import logging
 import yaml
 import os
+import re
 
 import dotenv
 dotenv.load_dotenv()
@@ -84,22 +85,13 @@ def find_album_by_name(album_name: str, albums: list[dict]) -> str:
             return album['id']
     return None
 
+def process_album_name(regexp: str|None, folder_name: str) -> str:
+    if not regexp:
+        return folder_name
+    m = re.search(regexp, folder_name)
+    return m.group() if m else folder_name
 
-def main():
-    api = ImmichAPI(
-        os.getenv('IMMICH_API_URL'),
-        os.getenv('IMMICH_API_KEY')
-    )
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--delete-all-albums", default=False, action="store_true", help="Delete all existing immich albums before proceeding")
-    parser.add_argument("-s", "--chunk-size", default=None, type=int, help="Max number of assets to add to an album per API call (default: add all assets to each album in one API call. Sometimes the API call crash if there're too many assets in an album, try lowering this value if that's the case.")
-    parser.add_argument("-v", "--verbose", default=0, action='count', help="Increase verbosity level (up to -vv)")
-    args = parser.parse_args()
-
-    if args.verbose >= 1: logger.setLevel(logging.INFO)
-    if args.verbose >= 2: logger.setLevel(logging.DEBUG)
-
+def run(args: argparse.Namespace, api: ImmichAPI):
     if args.delete_all_albums:
         logger.info("Deleting all albums...")
         api.delete_all_albums()
@@ -115,14 +107,18 @@ def main():
     albums: list[Path] = [p for p in potential_albums if (p / '.album').is_file()]
 
     for album_root in sorted(albums):
-        logger.info(f"Album '{album_root}'")
+        logger.info(f"Folder '{album_root}'")
 
         album_props: dict|None = yaml.safe_load(open(album_root / '.album'))
         album_props: dict = album_props if album_props else dict()
-        album_name: str = album_props.get("name", album_root.name)
+        album_name: str = album_props.get("name", process_album_name(args.album_regex, album_root.name))
         album_desc: str = album_props.get("description", "")
         album_order: str = album_props.get("order", "desc")
         recursive: bool = album_props.get("recursive", True)
+
+        logger.info(f"\tAlbum name: '{album_name}'")
+        if args.dry_run:
+            continue
 
         album_id: str|None = find_album_by_name(album_name, immich_albums)
         if album_id is None:
@@ -151,6 +147,39 @@ def main():
         for chunk in chunks:
             logger.debug(f"\tAdding {len(chunk)} assets to album '{album_name}' (album id: {album_id})")
             api.album_add_assets(album_id, chunk)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--api-url", type=str, help="Immich API url (should typically end with '/api')")
+    parser.add_argument("--api-key", type=str, help="Immich API key")
+    parser.add_argument("-r", "--album-regex", type=str, help="Regexp to compute album name from folder name (default: just use folder name)")
+    parser.add_argument("-s", "--chunk-size", type=int, help="Max number of assets to add to an album per API call (default: add all assets to each album in one API call). Sometimes the API call crash if there're too many assets in an album, try lowering this value if that's the case.")
+    parser.add_argument("-v", "--verbose", action='count', help="Increase verbosity level (up to -vv)")
+    parser.add_argument("-n", "--dry-run", action="store_true", help="Don't create new albums, just print the name of the albums that would be created (useful to test your regex)")
+    parser.add_argument("-X", "--delete-all-albums", action="store_true", help="Delete all existing immich albums before proceeding (even with -n/--dry-run)")
+
+    parser.set_defaults(
+        api_url =           os.getenv("IMMICH_API_URL"),
+        api_key =           os.getenv("IMMICH_API_KEY"),
+        album_regex =       os.getenv("ALBUM_NAME_REGEX"),
+        chunk_size =        os.getenv("API_CHUNK_SIZE"),
+        verbose =           int(os.getenv("VERBOSE", 0)),
+        dry_run =           bool(os.getenv("DRY_RUN", False)),
+        delete_all_albums = bool(os.getenv("DELETE_ALL_ALBUMS", False)),
+    )
+
+    args = parser.parse_args()
+
+    if args.verbose >= 1: logger.setLevel(logging.INFO)
+    if args.verbose >= 2: logger.setLevel(logging.DEBUG)
+
+    api = ImmichAPI(
+        args.api_url,
+        args.api_key
+    )
+
+    run(args, api)
 
 
 if __name__ == '__main__':
