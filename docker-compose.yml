@@ -1,0 +1,27 @@
+services:
+  immich-folder-albums:
+    image: ghcr.io/yayuniversal/immich-folder-albums
+    container_name: immich-folder-albums
+    volumes:
+      # Mount the external library at the same mountpoint immich sees it
+      - /path/to/your/photos:/path/inside/immich:ro
+    environment:
+      IMMICH_API_URL: <IMMICH_API_URL>
+      IMMICH_API_KEY: <IMMICH_API_KEY>
+      VERBOSE: 1  # Set to 2 for extended logging. Unsetting the variable or setting it to 0 will disable all output.
+
+      # Uncomment to set a regex to preprocess each album name from its folder name
+      # The input of the regex will be the folder name (not the full path), and the output will be used as the album name
+      #ALBUM_NAME_REGEX:
+
+      # Uncomment to add assets to albums by chunks of API_CHUNK_SIZE assets maximum per API call
+      #API_CHUNK_SIZE:
+
+      # Uncomment for dry run
+      # /!\ Does not prevent DELETE_ALL_ALBUMS to delete all existing albums if enabled!
+      # Enabled if set and non-empty (even if set to 0)
+      #DRY_RUN: 1
+
+      # Uncomment to delete all existing albums before creating the new ones. /!\ This will be done at each run!
+      # Enabled if set and non-empty (even if set to 0)
+      #DELETE_ALL_ALBUMS: 1
