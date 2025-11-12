@@ -11,7 +11,7 @@ import re
 import dotenv
 dotenv.load_dotenv()
 
-logging.basicConfig(encoding='utf-8')
+logging.basicConfig(encoding='utf-8', format="%(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -94,9 +94,10 @@ def process_album_name(regexp: str|None, folder_name: str) -> str:
 
 def run(args: argparse.Namespace, api: ImmichAPI):
     if args.delete_all_albums:
-        logger.info("Deleting all albums...")
+        logger.debug("Deleting all albums...")
         api.delete_all_albums()
 
+    logger.debug("Retrieving existing albums...")
     immich_albums: list[dict] = api.get_albums()
 
     unique_paths: list[Path] = [Path(p) for p in api.get_unique_paths()]
@@ -108,7 +109,7 @@ def run(args: argparse.Namespace, api: ImmichAPI):
     albums: list[Path] = [p for p in potential_albums if (p / '.album').is_file()]
 
     for album_root in sorted(albums):
-        logger.info(f"Folder '{album_root}'")
+        logger.info(f"{album_root}")
 
         album_props: dict|None = yaml.safe_load(open(album_root / '.album'))
         album_props: dict = album_props if album_props else dict()
@@ -157,7 +158,7 @@ def main():
     parser.add_argument("-r", "--album-regex", type=str, help="Regexp to compute album name from folder name (default: just use folder name)")
     parser.add_argument("-s", "--chunk-size", type=int, help="Max number of assets to add to an album per API call (default: add all assets to each album in one API call). Sometimes the API call crash if there're too many assets in an album, try lowering this value if that's the case.")
     parser.add_argument("-v", "--verbose", action='count', help="Increase verbosity level (up to -vv)")
-    parser.add_argument("-n", "--dry-run", action="store_true", help="Don't create new albums, just print the name of the albums that would be created (useful to test your regex)")
+    parser.add_argument("-n", "--dry-run", action="store_true", help="Don't create new albums, just print the name of the albums that would be created if used with -v (useful to test your regex)")
     parser.add_argument("-X", "--delete-all-albums", action="store_true", help="Delete all existing immich albums before proceeding (even with -n/--dry-run)")
 
     parser.set_defaults(
