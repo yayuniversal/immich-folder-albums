@@ -4,6 +4,7 @@ import requests
 import argparse
 import logging
 import yaml
+import sys
 import os
 import re
 
@@ -173,6 +174,10 @@ def main():
 
     if args.verbose >= 1: logger.setLevel(logging.INFO)
     if args.verbose >= 2: logger.setLevel(logging.DEBUG)
+
+    if not all((args.api_url, args.api_key)):
+        print("The --api-url and --api-key parameters are required. Please specify them or use the IMMICH_API_URL and IMMICH_API_KEY environment variables.", file=sys.stderr)
+        exit(1)
 
     api = ImmichAPI(
         args.api_url,
