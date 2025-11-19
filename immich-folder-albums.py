@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import requests
+from threading import Lock
 import argparse
 import logging
-import yaml
 import sys
 import os
 import re
+
+from scheduler import Scheduler
+import requests
+import yaml
 
 import dotenv
 dotenv.load_dotenv()
 
 logging.basicConfig(encoding='utf-8', format="%(message)s")
 logger = logging.getLogger(__name__)
+
+lock = Lock()
 
 
 class ImmichAPI:
@@ -93,6 +98,9 @@ def process_album_name(regexp: str|None, folder_name: str) -> str:
     return m.group() if m else folder_name
 
 def run(args: argparse.Namespace, api: ImmichAPI):
+    if not lock.acquire(blocking=False):
+        return False
+
     if args.delete_all_albums:
         logger.debug("Deleting all albums...")
         api.delete_all_albums()
@@ -150,6 +158,8 @@ def run(args: argparse.Namespace, api: ImmichAPI):
             logger.debug(f"\tAdding {len(chunk)} assets to album '{album_name}' (album id: {album_id})")
             api.album_add_assets(album_id, chunk)
 
+    lock.release()
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -160,6 +170,7 @@ def main():
     parser.add_argument("-v", "--verbose", action='count', help="Increase verbosity level (up to -vv)")
     parser.add_argument("-n", "--dry-run", action="store_true", help="Don't create new albums, just print the name of the albums that would be created if used with -v (useful to test your regex)")
     parser.add_argument("-X", "--delete-all-albums", action="store_true", help="Delete all existing immich albums before proceeding (even with -n/--dry-run)")
+    parser.add_argument("-c", "--cron-expr", type=str, help="Cron expression for scheduled run")
 
     parser.set_defaults(
         api_url =           os.getenv("IMMICH_API_URL"),
@@ -169,6 +180,7 @@ def main():
         verbose =           int(os.getenv("VERBOSE", 0)),
         dry_run =           bool(os.getenv("DRY_RUN", False)),
         delete_all_albums = bool(os.getenv("DELETE_ALL_ALBUMS", False)),
+        cron_expr =         os.getenv("CRON_EXPRESSION"),
     )
 
     args = parser.parse_args()
@@ -185,7 +197,12 @@ def main():
         args.api_key
     )
 
-    run(args, api)
+    if args.cron_expr:
+        scheduler = Scheduler(60)
+        scheduler.add('run', args.cron_expr, run, (args, api))
+        scheduler.start()
+    else:
+        run(args, api)
 
 
 if __name__ == '__main__':
