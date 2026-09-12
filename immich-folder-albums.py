@@ -101,7 +101,7 @@ def run(args: argparse.Namespace, api: ImmichAPI):
     if not lock.acquire(blocking=False):
         return False
 
-    if args.delete_all_albums:
+    if args.delete_all_albums and not args.dry_run:
         logger.debug("Deleting all albums...")
         api.delete_all_albums()
 
@@ -169,7 +169,7 @@ def main():
     parser.add_argument("-s", "--chunk-size", type=int, help="Max number of assets to add to an album per API call (default: add all assets to each album in one API call). Sometimes the API call crash if there're too many assets in an album, try lowering this value if that's the case.")
     parser.add_argument("-v", "--verbose", action='count', help="Increase verbosity level (up to -vv)")
     parser.add_argument("-n", "--dry-run", action="store_true", help="Don't create new albums, just print the name of the albums that would be created if used with -v (useful to test your regex)")
-    parser.add_argument("-X", "--delete-all-albums", action="store_true", help="Delete all existing immich albums before proceeding (even with -n/--dry-run)")
+    parser.add_argument("-X", "--delete-all-albums", action="store_true", help="Delete all existing immich albums before proceeding")
     parser.add_argument("-c", "--cron-expr", type=str, help="Cron expression for scheduled run")
 
     parser.set_defaults(

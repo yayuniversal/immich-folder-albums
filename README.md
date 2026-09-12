@@ -56,7 +56,7 @@ docker compose up -d
 
 Important:
 - `DRY_RUN` and `DELETE_ALL_ALBUMS` are considered enabled when the variable exists and is non-empty — even the value `0` will be treated as enabled.
-- `DELETE_ALL_ALBUMS` will delete all existing albums **EVEN IF** `DRY_RUN` is enabled! So by using `DELETE_ALL_ALBUMS` with `DRY_RUN`, you'll wipe all your albums without creating new ones, ending up with 0 Immich albums.
+- `DELETE_ALL_ALBUMS` is ignored when `DRY_RUN` is enabled — dry-run takes precedence and no albums are deleted.
 
 
 ## Manual use
@@ -102,7 +102,7 @@ options:
   -v, --verbose         Increase verbosity level (up to -vv)
   -n, --dry-run         Don't create new albums, just print the name of the albums that would be created if used with -v (useful to test your regex)
   -X, --delete-all-albums
-                        Delete all existing immich albums before proceeding (even with -n/--dry-run)
+                        Delete all existing immich albums before proceeding
   -c, --cron-expr CRON_EXPR
                         Cron expression for scheduled run
 ```
@@ -164,7 +164,7 @@ Check [crontab.guru](https://crontab.guru/) for help with cron expressions.
 ## Dry-run
 
 - Use `DRY_RUN` or `-n,--dry-run` when testing album names/regex; the script will not create or add to albums when dry-run is enabled. Useful with `VERBOSE` / `-v,--verbose` to print the preprocessed album names.
-- Beware: dry run doesn't prevent deletion of all existing albums when `DELETE_ALL_ALBUMS` / `-X,--delete-all-albums` is enabled!
+- Dry-run also prevents deletion of all existing albums when `DELETE_ALL_ALBUMS` / `-X,--delete-all-albums` is enabled.
 
 
 ## Troubleshooting
