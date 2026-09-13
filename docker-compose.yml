@@ -9,9 +9,12 @@ services:
       IMMICH_API_URL: <IMMICH_API_URL>
       IMMICH_API_KEY: <IMMICH_API_KEY>
       
-      # Set to 2 for extended logging.
-      # Unsetting the variable or setting it to 0 will disable all output.
+      # Set to 1 for debug output. Default (unset or 0) is info-level.
       VERBOSE: 1
+
+      # Uncomment to suppress info and debug output (only show warnings and errors)
+      # Takes precedence over VERBOSE.
+      #QUIET: 1
 
       # Cron expression for scheduled run
       # The following example runs the script every day at 2:00AM
@@ -26,11 +29,10 @@ services:
       #API_CHUNK_SIZE: 1000
 
       # Uncomment for dry run
-      # /!\ Does not prevent deletion of all albums if DELETE_ALL_ALBUMS is enabled!
-      # Enabled if set and non-empty (even if set to 0)
+      # Accepts true/false, 0/1, or any non-empty string (enabled).
       #DRY_RUN: 1
 
       # Uncomment to delete all existing albums before creating the new ones.
       # /!\ This will be done each time the script runs! So it will actually reset all your albums each time
-      # Enabled if set and non-empty (even if set to 0)
+      # Accepts true/false, 0/1, or any non-empty string (enabled).
       #DELETE_ALL_ALBUMS: 1

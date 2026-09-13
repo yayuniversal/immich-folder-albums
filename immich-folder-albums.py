@@ -16,8 +16,23 @@ dotenv.load_dotenv()
 
 logging.basicConfig(encoding='utf-8', format="%(message)s")
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 lock = Lock()
+
+
+def env_bool(value: str | bool | None) -> bool:
+    if isinstance(value, bool):
+        return value
+    if not value:
+        return False
+    if value.lower() == "false":
+        return False
+    if value.lower() == "true":
+        return True
+    if value.isdigit():
+        return int(value) != 0
+    return True
 
 
 class ImmichAPI:
@@ -102,10 +117,10 @@ def run(args: argparse.Namespace, api: ImmichAPI):
         return False
 
     if args.delete_all_albums and not args.dry_run:
-        logger.debug("Deleting all albums...")
+        logger.info("Deleting all albums...")
         api.delete_all_albums()
 
-    logger.debug("Retrieving existing albums...")
+    logger.info("Retrieving existing albums...")
     immich_albums: list[dict] = api.get_albums()
 
     unique_paths: list[Path] = [Path(p) for p in api.get_unique_paths()]
@@ -159,6 +174,7 @@ def run(args: argparse.Namespace, api: ImmichAPI):
             api.album_add_assets(album_id, chunk)
 
     lock.release()
+    return True
 
 
 def main():
@@ -167,7 +183,8 @@ def main():
     parser.add_argument("--api-key", type=str, help="Immich API key")
     parser.add_argument("-r", "--album-regex", type=str, help="Regexp to compute album name from folder name (default: just use folder name)")
     parser.add_argument("-s", "--chunk-size", type=int, help="Max number of assets to add to an album per API call (default: add all assets to each album in one API call). Sometimes the API call crash if there're too many assets in an album, try lowering this value if that's the case.")
-    parser.add_argument("-v", "--verbose", action='count', help="Increase verbosity level (up to -vv)")
+    parser.add_argument("-v", "--verbose", action='count', help="Increase verbosity level")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress all output (only show errors). Takes precedence on -v.")
     parser.add_argument("-n", "--dry-run", action="store_true", help="Don't create new albums, just print the name of the albums that would be created if used with -v (useful to test your regex)")
     parser.add_argument("-X", "--delete-all-albums", action="store_true", help="Delete all existing immich albums before proceeding")
     parser.add_argument("-c", "--cron-expr", type=str, help="Cron expression for scheduled run")
@@ -178,15 +195,16 @@ def main():
         album_regex =       os.getenv("ALBUM_NAME_REGEX"),
         chunk_size =        os.getenv("API_CHUNK_SIZE"),
         verbose =           int(os.getenv("VERBOSE", 0)),
-        dry_run =           bool(os.getenv("DRY_RUN", False)),
-        delete_all_albums = bool(os.getenv("DELETE_ALL_ALBUMS", False)),
+        quiet =             env_bool(os.getenv("QUIET", False)),
+        dry_run =           env_bool(os.getenv("DRY_RUN", False)),
+        delete_all_albums = env_bool(os.getenv("DELETE_ALL_ALBUMS", False)),
         cron_expr =         os.getenv("CRON_EXPRESSION"),
     )
 
     args = parser.parse_args()
 
-    if args.verbose >= 1: logger.setLevel(logging.INFO)
-    if args.verbose >= 2: logger.setLevel(logging.DEBUG)
+    if args.verbose >= 1: logger.setLevel(logging.DEBUG)
+    if args.quiet: logger.setLevel(logging.WARNING)
 
     if not all((args.api_url, args.api_key)):
         print("The --api-url and --api-key parameters are required. Please specify them or use the IMMICH_API_URL and IMMICH_API_KEY environment variables.", file=sys.stderr)

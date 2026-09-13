@@ -26,7 +26,8 @@ services:
     environment:
       IMMICH_API_URL: https://immich.example.com/api
       IMMICH_API_KEY: your_api_key
-      VERBOSE: 1  # 0 = quiet, 1 = info, 2 = debug
+      VERBOSE: 1  # 0 = info (default), 1 = debug
+      # QUIET: 1  # suppress info/debug output, only show warnings and errors
       CRON_EXPRESSION: "0 2 * * *"  # run daily at 02:00
       # ALBUM_NAME_REGEX: "your_regex"
       # API_CHUNK_SIZE: 1000
@@ -49,13 +50,15 @@ docker compose up -d
 - `IMMICH_API_KEY` (required) — Immich API key
 - `ALBUM_NAME_REGEX` — Regex to transform folder name into album name
 - `API_CHUNK_SIZE` — Max assets per API call (useful for very large albums)
-- `VERBOSE` — 0 = quiet (default), 1 = info, 2 = debug
-- `DRY_RUN` — if set and non-empty, do not create or add to albums
-- `DELETE_ALL_ALBUMS` — if set and non-empty, delete all existing albums before creating new ones. WARNING: destructive.
-- `CRON_EXPRESSION` — run schedule (standard cron expression). If unset, the script runs once and exits.
+- `VERBOSE` — Set to a non-zero value to enable debug output (default: info-level)
+- `QUIET` — If set and non-zero, suppress info and debug output (only show warnings and errors)
+- `DRY_RUN` — If set and non-zero, do not create or add to albums
+- `DELETE_ALL_ALBUMS` — If set and non-zero, delete all existing albums before creating new ones. WARNING: destructive.
+- `CRON_EXPRESSION` — Run schedule (standard cron expression). If unset, the script runs once and exits.
 
 Important:
-- `DRY_RUN` and `DELETE_ALL_ALBUMS` are considered enabled when the variable exists and is non-empty — even the value `0` will be treated as enabled.
+- `QUIET`, `DRY_RUN`, and `DELETE_ALL_ALBUMS` accept `true`/`false` (case-insensitive), `0`/`1`, or any non-empty string (treated as enabled). `0`, `false`, and an empty/unset variable are treated as disabled.
+- `QUIET` takes precedence over `VERBOSE`.
 - `DELETE_ALL_ALBUMS` is ignored when `DRY_RUN` is enabled — dry-run takes precedence and no albums are deleted.
 
 
@@ -89,7 +92,7 @@ Important:
 
 ### Usage
 ```
-usage: immich-folder-albums.py [-h] [--api-url API_URL] [--api-key API_KEY] [-r ALBUM_REGEX] [-s CHUNK_SIZE] [-v] [-n] [-X] [-c CRON_EXPR]
+usage: immich-folder-albums.py [-h] [--api-url API_URL] [--api-key API_KEY] [-r ALBUM_REGEX] [-s CHUNK_SIZE] [-v] [-q] [-n] [-X] [-c CRON_EXPR]
 
 options:
   -h, --help            show this help message and exit
@@ -99,7 +102,8 @@ options:
                         Regexp to compute album name from folder name (default: just use folder name)
   -s, --chunk-size CHUNK_SIZE
                         Max number of assets to add to an album per API call (default: add all assets to each album in one API call). Sometimes the API call crash if there're too many assets in an album, try lowering this value if that's the case.
-  -v, --verbose         Increase verbosity level (up to -vv)
+  -v, --verbose         Increase verbosity level
+  -q, --quiet           Suppress all output (only show errors). Takes precedence on -v.
   -n, --dry-run         Don't create new albums, just print the name of the albums that would be created if used with -v (useful to test your regex)
   -X, --delete-all-albums
                         Delete all existing immich albums before proceeding
@@ -115,12 +119,13 @@ All CLI options can also be set via environment variables:
 | `--api-key`                 | `IMMICH_API_KEY`        |    x     |                                              |
 | `-r`, `--album-regex`       | `ALBUM_NAME_REGEX`      |          | Use the folder name as album name            |
 | `-s`, `--chunk-size`        | `API_CHUNK_SIZE`        |          | Add all assets to each album in one API call |
-| `-v`, `--verbose`           | `VERBOSE`               |          | 0 (up to 2, or `-vv`)                        |
+| `-v`, `--verbose`           | `VERBOSE`               |          | Info-level                                   |
+| `-q`, `--quiet`             | `QUIET`[^1]             |          |                                              |
 | `-n`, `--dry-run`           | `DRY_RUN`[^1]           |          |                                              |
-| `-X`, `--delete-all-albums` | `DELETE_ALL_ALBUMS`[^1] |          | Add new assets to existing album if present  |
+| `-X`, `--delete-all-albums` | `DELETE_ALL_ALBUMS`[^1] |          | Disabled                                     |
 | `-c`, `--cron-expr`         | `CRON_EXPRESSION`       |          | Run once and exit                            |
 
-[^1]: Enabled if set and non-empty. So even if `DELETE_ALL_ALBUMS=0`, all existing albums will be deleted.
+[^1]: Accepts `true`/`false` (case-insensitive), `0`/`1`, or any non-empty string (enabled). `0`, `false`, and an unset variable are treated as disabled.
 
 
 ## External library mounting
